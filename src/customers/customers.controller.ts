@@ -2,12 +2,17 @@ import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/commo
 import { CustomersService } from './customers.service';
 import { CreateCustomerWithAddressDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
+import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 
+@ApiTags('customers')
 @Controller('customers')
 export class CustomersController {
   constructor(private readonly customersService: CustomersService) {}
 
   @Post()
+  @ApiOperation({ summary: 'Create a new customer' })
+  @ApiResponse({ status: 201, description: 'The customer has been successfully created.' })
+  @ApiResponse({ status: 400, description: 'Bad Request' })
   create(@Body() createCustomerDto: CreateCustomerWithAddressDto) {
     return this.customersService.createCustomerWithAddresses(createCustomerDto);
   }
@@ -18,6 +23,10 @@ export class CustomersController {
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Get a customer by ID' })
+  @ApiParam({ name: 'id', description: 'Customer ID', type: String })
+  @ApiResponse({ status: 200, description: 'The customer has been successfully retrieved.' })
+  @ApiResponse({ status: 404, description: 'Customer not found' })
   findOne(@Param('id') id: string) {
     return this.customersService.findOne(id);
   }
