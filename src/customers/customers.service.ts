@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateCustomerWithAddressDto } from './dto/create-customer.dto';
 import { DatabaseService } from 'src/database/database.service';
 import { AddressService } from 'src/address/address.service';
@@ -81,8 +81,39 @@ export class CustomersService {
   }
 
   async remove(id: string) {
-    return this.databaseService.customer.delete({
+    // Find the customer and their addresses
+    const customer = await this.databaseService.customer.findUnique({
+      where: { id },
+      include: { addresses: true },
+    });
+
+    if (!customer) {
+      throw new NotFoundException('Customer not found');
+    }
+
+    // Get addresses of the customer
+    const customerAddresses = customer.addresses;
+
+    // Delete the customer
+    await this.databaseService.customer.delete({
       where: { id },
     });
+
+    // Check each address to see if it is associated with other customers
+    for (const address of customerAddresses) {
+      const isAddressUsedByOtherCustomers = await this.databaseService.address.findFirst({
+        where: {
+          id: address.id,
+          customers: { some: {} },
+        },
+      });
+
+      if (!isAddressUsedByOtherCustomers) {
+        // If address is not used by other customers, delete it
+        await this.addressService.remove(address.id);
+      }
+    }
+
+    return { message: 'Customer and only unused addresses removed successfully' };
   }
 }
